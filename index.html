@@ -4,10 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Interactive Calendar</title>
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/lucide-react@0.263.1/dist/umd/lucide-react.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
@@ -16,344 +12,364 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
             background-color: #f5f5f5;
         }
+        .calendar-day:hover {
+            background-color: #f9fafb;
+        }
+        .today {
+            background-color: #dbeafe !important;
+            border-color: #93c5fd !important;
+        }
+        .event-item {
+            background-color: #dbeafe;
+            color: #1e40af;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            margin-bottom: 0.25rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .event-actions {
+            display: none;
+            gap: 0.25rem;
+        }
+        .event-item:hover .event-actions {
+            display: flex;
+        }
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+        .modal {
+            background: white;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            width: 24rem;
+            max-width: 90vw;
+        }
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            border: none;
+            transition: background-color 0.2s;
+        }
+        .btn-primary {
+            background-color: #2563eb;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #1d4ed8;
+        }
+        .btn-secondary {
+            background-color: #d1d5db;
+            color: #374151;
+        }
+        .btn-secondary:hover {
+            background-color: #9ca3af;
+        }
+        .btn:disabled {
+            background-color: #d1d5db;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
-    <div id="root"></div>
+    <div class="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-lg">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-2">
+                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+                <h1 class="text-2xl font-bold text-gray-800">My Calendar</h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <button onclick="navigateMonth(-1)" class="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                </button>
+                <h2 id="monthYear" class="text-xl font-semibold text-gray-700 min-w-48 text-center"></h2>
+                <button onclick="navigateMonth(1)" class="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
 
-    <script type="text/babel">
-        const { useState, useMemo } = React;
-        const { ChevronLeft, ChevronRight, Plus, Edit, Trash2, Calendar } = lucideReact;
+        <!-- Calendar Grid -->
+        <div id="calendar" class="grid grid-cols-7 gap-1 mb-4">
+            <!-- Calendar will be populated by JavaScript -->
+        </div>
+    </div>
 
-        const InteractiveCalendar = () => {
-            const [currentDate, setCurrentDate] = useState(new Date());
-            const [events, setEvents] = useState(() => {
-                // Load events from localStorage
-                const saved = localStorage.getItem('calendarEvents');
-                return saved ? JSON.parse(saved) : {};
+    <!-- Event Modal -->
+    <div id="eventModal" class="modal-overlay" style="display: none;">
+        <div class="modal">
+            <h3 id="modalTitle" class="text-lg font-semibold mb-4">Add New Event</h3>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Event Title *</label>
+                    <input type="text" id="eventTitle" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter event title">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Time</label>
+                    <input type="time" id="eventTime" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <textarea id="eventDescription" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter event description"></textarea>
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-6">
+                <button id="saveEventBtn" onclick="saveEvent()" class="flex-1 btn btn-primary">Save Event</button>
+                <button onclick="closeModal()" class="flex-1 btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentDate = new Date();
+        let events = JSON.parse(localStorage.getItem('calendarEvents') || '{}');
+        let selectedDate = null;
+        let editingEvent = null;
+
+        const monthNames = [
+            'January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'
+        ];
+
+        const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+        // Utility functions
+        function getDaysInMonth(date) {
+            return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+        }
+
+        function getFirstDayOfMonth(date) {
+            return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+        }
+
+        function formatDateKey(year, month, day) {
+            return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        }
+
+        function isToday(day) {
+            const today = new Date();
+            return day &&
+                   currentDate.getFullYear() === today.getFullYear() &&
+                   currentDate.getMonth() === today.getMonth() &&
+                   day === today.getDate();
+        }
+
+        function saveEventsToStorage() {
+            localStorage.setItem('calendarEvents', JSON.stringify(events));
+        }
+
+        // Navigation
+        function navigateMonth(direction) {
+            currentDate.setMonth(currentDate.getMonth() + direction);
+            renderCalendar();
+        }
+
+        // Event management
+        function openEventModal(day) {
+            selectedDate = formatDateKey(currentDate.getFullYear(), currentDate.getMonth(), day);
+            document.getElementById('eventTitle').value = '';
+            document.getElementById('eventTime').value = '';
+            document.getElementById('eventDescription').value = '';
+            document.getElementById('modalTitle').textContent = 'Add New Event';
+            document.getElementById('saveEventBtn').textContent = 'Save Event';
+            editingEvent = null;
+            document.getElementById('eventModal').style.display = 'flex';
+        }
+
+        function editEvent(dateKey, eventIndex) {
+            const event = events[dateKey][eventIndex];
+            selectedDate = dateKey;
+            document.getElementById('eventTitle').value = event.title;
+            document.getElementById('eventTime').value = event.time || '';
+            document.getElementById('eventDescription').value = event.description || '';
+            document.getElementById('modalTitle').textContent = 'Edit Event';
+            document.getElementById('saveEventBtn').textContent = 'Update Event';
+            editingEvent = eventIndex;
+            document.getElementById('eventModal').style.display = 'flex';
+        }
+
+        function saveEvent() {
+            const title = document.getElementById('eventTitle').value.trim();
+            if (!title) return;
+
+            const time = document.getElementById('eventTime').value;
+            const description = document.getElementById('eventDescription').value;
+
+            if (!events[selectedDate]) {
+                events[selectedDate] = [];
+            }
+
+            const eventData = { title, time, description };
+
+            if (editingEvent !== null) {
+                events[selectedDate][editingEvent] = eventData;
+            } else {
+                events[selectedDate].push(eventData);
+            }
+
+            saveEventsToStorage();
+            closeModal();
+            renderCalendar();
+        }
+
+        function deleteEvent(dateKey, eventIndex) {
+            events[dateKey].splice(eventIndex, 1);
+            if (events[dateKey].length === 0) {
+                delete events[dateKey];
+            }
+            saveEventsToStorage();
+            renderCalendar();
+        }
+
+        function closeModal() {
+            document.getElementById('eventModal').style.display = 'none';
+        }
+
+        // Calendar rendering
+        function renderCalendar() {
+            const calendar = document.getElementById('calendar');
+            const monthYear = document.getElementById('monthYear');
+            
+            // Update header
+            monthYear.textContent = `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+            
+            // Clear calendar
+            calendar.innerHTML = '';
+
+            // Add week day headers
+            weekDays.forEach(day => {
+                const header = document.createElement('div');
+                header.className = 'p-3 text-center font-semibold text-gray-600 bg-gray-50';
+                header.textContent = day;
+                calendar.appendChild(header);
             });
-            const [selectedDate, setSelectedDate] = useState(null);
-            const [showEventModal, setShowEventModal] = useState(false);
-            const [editingEvent, setEditingEvent] = useState(null);
-            const [eventForm, setEventForm] = useState({
-                title: '',
-                time: '',
-                description: ''
-            });
 
-            const monthNames = [
-                'January', 'February', 'March', 'April', 'May', 'June',
-                'July', 'August', 'September', 'October', 'November', 'December'
-            ];
+            // Calculate calendar days
+            const daysInMonth = getDaysInMonth(currentDate);
+            const firstDay = getFirstDayOfMonth(currentDate);
 
-            const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            // Add empty cells for days before the first day of the month
+            for (let i = 0; i < firstDay; i++) {
+                const emptyDay = document.createElement('div');
+                emptyDay.className = 'min-h-24 border border-gray-200 p-2 bg-gray-50';
+                calendar.appendChild(emptyDay);
+            }
 
-            const getDaysInMonth = (date) => {
-                return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-            };
+            // Add days of the month
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayCell = document.createElement('div');
+                const dateKey = formatDateKey(currentDate.getFullYear(), currentDate.getMonth(), day);
+                const dayEvents = events[dateKey] || [];
+                const todayClass = isToday(day) ? ' today' : '';
+                
+                dayCell.className = `min-h-24 border border-gray-200 p-2 calendar-day cursor-pointer${todayClass}`;
+                dayCell.onclick = () => openEventModal(day);
 
-            const getFirstDayOfMonth = (date) => {
-                return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
-            };
+                // Day number
+                const dayNumber = document.createElement('div');
+                dayNumber.className = 'font-medium text-gray-700 mb-1';
+                dayNumber.textContent = day;
+                dayCell.appendChild(dayNumber);
 
-            const formatDateKey = (year, month, day) => {
-                return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            };
+                // Events container
+                const eventsContainer = document.createElement('div');
+                eventsContainer.className = 'space-y-1';
 
-            // Save events to localStorage whenever events change
-            const saveEventsToStorage = (newEvents) => {
-                localStorage.setItem('calendarEvents', JSON.stringify(newEvents));
-                setEvents(newEvents);
-            };
+                // Show up to 2 events
+                dayEvents.slice(0, 2).forEach((event, eventIndex) => {
+                    const eventDiv = document.createElement('div');
+                    eventDiv.className = 'event-item';
+                    eventDiv.onclick = (e) => e.stopPropagation();
 
-            const calendarDays = useMemo(() => {
-                const daysInMonth = getDaysInMonth(currentDate);
-                const firstDay = getFirstDayOfMonth(currentDate);
-                const days = [];
+                    const eventTitle = document.createElement('span');
+                    eventTitle.className = 'truncate';
+                    eventTitle.textContent = event.title;
 
-                for (let i = 0; i < firstDay; i++) {
-                    days.push(null);
-                }
+                    const eventActions = document.createElement('div');
+                    eventActions.className = 'event-actions';
 
-                for (let day = 1; day <= daysInMonth; day++) {
-                    days.push(day);
-                }
+                    // Edit button
+                    const editBtn = document.createElement('button');
+                    editBtn.innerHTML = '✏️';
+                    editBtn.className = 'p-1 hover:bg-blue-200 rounded';
+                    editBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        editEvent(dateKey, eventIndex);
+                    };
 
-                return days;
-            }, [currentDate]);
+                    // Delete button
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.innerHTML = '🗑️';
+                    deleteBtn.className = 'p-1 hover:bg-red-200 rounded text-red-600';
+                    deleteBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        deleteEvent(dateKey, eventIndex);
+                    };
 
-            const navigateMonth = (direction) => {
-                setCurrentDate(prev => {
-                    const newDate = new Date(prev);
-                    newDate.setMonth(prev.getMonth() + direction);
-                    return newDate;
+                    eventActions.appendChild(editBtn);
+                    eventActions.appendChild(deleteBtn);
+                    eventDiv.appendChild(eventTitle);
+                    eventDiv.appendChild(eventActions);
+                    eventsContainer.appendChild(eventDiv);
                 });
-            };
 
-            const openEventModal = (day) => {
-                const dateKey = formatDateKey(currentDate.getFullYear(), currentDate.getMonth(), day);
-                setSelectedDate(dateKey);
-                setEventForm({ title: '', time: '', description: '' });
-                setEditingEvent(null);
-                setShowEventModal(true);
-            };
-
-            const editEvent = (dateKey, eventIndex) => {
-                const event = events[dateKey][eventIndex];
-                setSelectedDate(dateKey);
-                setEventForm({ ...event });
-                setEditingEvent(eventIndex);
-                setShowEventModal(true);
-            };
-
-            const saveEvent = () => {
-                if (!eventForm.title.trim()) return;
-
-                const newEvents = { ...events };
-                if (!newEvents[selectedDate]) {
-                    newEvents[selectedDate] = [];
+                // Show "+X more" if there are more events
+                if (dayEvents.length > 2) {
+                    const moreEvents = document.createElement('div');
+                    moreEvents.className = 'text-xs text-gray-500';
+                    moreEvents.textContent = `+${dayEvents.length - 2} more`;
+                    eventsContainer.appendChild(moreEvents);
                 }
 
-                if (editingEvent !== null) {
-                    newEvents[selectedDate][editingEvent] = { ...eventForm };
-                } else {
-                    newEvents[selectedDate].push({ ...eventForm });
-                }
+                dayCell.appendChild(eventsContainer);
+                calendar.appendChild(dayCell);
+            }
+        }
 
-                saveEventsToStorage(newEvents);
-                setShowEventModal(false);
-                setEventForm({ title: '', time: '', description: '' });
-                setEditingEvent(null);
-            };
+        // Enable/disable save button based on title input
+        document.getElementById('eventTitle').addEventListener('input', function() {
+            const saveBtn = document.getElementById('saveEventBtn');
+            saveBtn.disabled = !this.value.trim();
+            if (saveBtn.disabled) {
+                saveBtn.className = saveBtn.className.replace('btn-primary', 'btn').replace('hover:bg-blue-700', '');
+            } else {
+                saveBtn.className = saveBtn.className.replace(/btn(?!\-)/g, 'btn-primary');
+            }
+        });
 
-            const deleteEvent = (dateKey, eventIndex) => {
-                const newEvents = { ...events };
-                newEvents[dateKey].splice(eventIndex, 1);
-                if (newEvents[dateKey].length === 0) {
-                    delete newEvents[dateKey];
-                }
-                saveEventsToStorage(newEvents);
-            };
+        // Close modal when clicking outside
+        document.getElementById('eventModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
 
-            const getDayEvents = (day) => {
-                if (!day) return [];
-                const dateKey = formatDateKey(currentDate.getFullYear(), currentDate.getMonth(), day);
-                return events[dateKey] || [];
-            };
-
-            const isToday = (day) => {
-                const today = new Date();
-                return day &&
-                       currentDate.getFullYear() === today.getFullYear() &&
-                       currentDate.getMonth() === today.getMonth() &&
-                       day === today.getDate();
-            };
-
-            return React.createElement('div', {
-                className: "max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-lg"
-            }, [
-                // Header
-                React.createElement('div', {
-                    key: 'header',
-                    className: "flex items-center justify-between mb-6"
-                }, [
-                    React.createElement('div', {
-                        key: 'title',
-                        className: "flex items-center gap-2"
-                    }, [
-                        React.createElement(Calendar, {
-                            key: 'icon',
-                            className: "w-6 h-6 text-blue-600"
-                        }),
-                        React.createElement('h1', {
-                            key: 'title-text',
-                            className: "text-2xl font-bold text-gray-800"
-                        }, 'My Calendar')
-                    ]),
-                    React.createElement('div', {
-                        key: 'nav',
-                        className: "flex items-center gap-4"
-                    }, [
-                        React.createElement('button', {
-                            key: 'prev',
-                            onClick: () => navigateMonth(-1),
-                            className: "p-2 hover:bg-gray-100 rounded-full transition-colors"
-                        }, React.createElement(ChevronLeft, { className: "w-5 h-5" })),
-                        React.createElement('h2', {
-                            key: 'month-year',
-                            className: "text-xl font-semibold text-gray-700 min-w-48 text-center"
-                        }, `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`),
-                        React.createElement('button', {
-                            key: 'next',
-                            onClick: () => navigateMonth(1),
-                            className: "p-2 hover:bg-gray-100 rounded-full transition-colors"
-                        }, React.createElement(ChevronRight, { className: "w-5 h-5" }))
-                    ])
-                ]),
-
-                // Calendar Grid
-                React.createElement('div', {
-                    key: 'calendar',
-                    className: "grid grid-cols-7 gap-1 mb-4"
-                }, [
-                    // Week headers
-                    ...weekDays.map(day => 
-                        React.createElement('div', {
-                            key: day,
-                            className: "p-3 text-center font-semibold text-gray-600 bg-gray-50"
-                        }, day)
-                    ),
-
-                    // Calendar days
-                    ...calendarDays.map((day, index) => {
-                        const dayEvents = getDayEvents(day);
-                        const todayClass = isToday(day) ? 'bg-blue-100 border-blue-300' : '';
-                        
-                        return React.createElement('div', {
-                            key: `day-${index}`,
-                            className: `min-h-24 border border-gray-200 p-2 ${todayClass} ${
-                                day ? 'hover:bg-gray-50 cursor-pointer' : 'bg-gray-50'
-                            }`,
-                            onClick: () => day && openEventModal(day)
-                        }, day ? [
-                            React.createElement('div', {
-                                key: 'day-number',
-                                className: "font-medium text-gray-700 mb-1"
-                            }, day),
-                            React.createElement('div', {
-                                key: 'events',
-                                className: "space-y-1"
-                            }, [
-                                ...dayEvents.slice(0, 2).map((event, eventIndex) =>
-                                    React.createElement('div', {
-                                        key: `event-${eventIndex}`,
-                                        className: "text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded truncate flex items-center justify-between group",
-                                        onClick: (e) => e.stopPropagation()
-                                    }, [
-                                        React.createElement('span', {
-                                            key: 'event-title',
-                                            className: "truncate"
-                                        }, event.title),
-                                        React.createElement('div', {
-                                            key: 'event-actions',
-                                            className: "hidden group-hover:flex gap-1"
-                                        }, [
-                                            React.createElement('button', {
-                                                key: 'edit-btn',
-                                                onClick: (e) => {
-                                                    e.stopPropagation();
-                                                    editEvent(formatDateKey(currentDate.getFullYear(), currentDate.getMonth(), day), eventIndex);
-                                                },
-                                                className: "p-1 hover:bg-blue-200 rounded"
-                                            }, React.createElement(Edit, { className: "w-3 h-3" })),
-                                            React.createElement('button', {
-                                                key: 'delete-btn',
-                                                onClick: (e) => {
-                                                    e.stopPropagation();
-                                                    deleteEvent(formatDateKey(currentDate.getFullYear(), currentDate.getMonth(), day), eventIndex);
-                                                },
-                                                className: "p-1 hover:bg-red-200 rounded text-red-600"
-                                            }, React.createElement(Trash2, { className: "w-3 h-3" }))
-                                        ])
-                                    ])
-                                ),
-                                dayEvents.length > 2 ? React.createElement('div', {
-                                    key: 'more-events',
-                                    className: "text-xs text-gray-500"
-                                }, `+${dayEvents.length - 2} more`) : null
-                            ])
-                        ] : null);
-                    })
-                ]),
-
-                // Event Modal
-                showEventModal ? React.createElement('div', {
-                    key: 'modal',
-                    className: "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-                }, React.createElement('div', {
-                    className: "bg-white rounded-lg p-6 w-96 max-w-90vw"
-                }, [
-                    React.createElement('h3', {
-                        key: 'modal-title',
-                        className: "text-lg font-semibold mb-4"
-                    }, editingEvent !== null ? 'Edit Event' : 'Add New Event'),
-                    
-                    React.createElement('div', {
-                        key: 'form',
-                        className: "space-y-4"
-                    }, [
-                        React.createElement('div', {
-                            key: 'title-field'
-                        }, [
-                            React.createElement('label', {
-                                key: 'title-label',
-                                className: "block text-sm font-medium text-gray-700 mb-1"
-                            }, 'Event Title *'),
-                            React.createElement('input', {
-                                key: 'title-input',
-                                type: "text",
-                                value: eventForm.title,
-                                onChange: (e) => setEventForm(prev => ({ ...prev, title: e.target.value })),
-                                className: "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500",
-                                placeholder: "Enter event title"
-                            })
-                        ]),
-
-                        React.createElement('div', {
-                            key: 'time-field'
-                        }, [
-                            React.createElement('label', {
-                                key: 'time-label',
-                                className: "block text-sm font-medium text-gray-700 mb-1"
-                            }, 'Time'),
-                            React.createElement('input', {
-                                key: 'time-input',
-                                type: "time",
-                                value: eventForm.time,
-                                onChange: (e) => setEventForm(prev => ({ ...prev, time: e.target.value })),
-                                className: "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            })
-                        ]),
-
-                        React.createElement('div', {
-                            key: 'desc-field'
-                        }, [
-                            React.createElement('label', {
-                                key: 'desc-label',
-                                className: "block text-sm font-medium text-gray-700 mb-1"
-                            }, 'Description'),
-                            React.createElement('textarea', {
-                                key: 'desc-input',
-                                value: eventForm.description,
-                                onChange: (e) => setEventForm(prev => ({ ...prev, description: e.target.value })),
-                                rows: "3",
-                                className: "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500",
-                                placeholder: "Enter event description"
-                            })
-                        ])
-                    ]),
-
-                    React.createElement('div', {
-                        key: 'buttons',
-                        className: "flex gap-3 mt-6"
-                    }, [
-                        React.createElement('button', {
-                            key: 'save-btn',
-                            onClick: saveEvent,
-                            disabled: !eventForm.title.trim(),
-                            className: "flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-                        }, editingEvent !== null ? 'Update Event' : 'Save Event'),
-                        React.createElement('button', {
-                            key: 'cancel-btn',
-                            onClick: () => setShowEventModal(false),
-                            className: "flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
-                        }, 'Cancel')
-                    ])
-                ])) : null
-            ]);
-        };
-
-        ReactDOM.render(React.createElement(InteractiveCalendar), document.getElementById('root'));
+        // Initialize calendar
+        renderCalendar();
     </script>
 </body>
 </html>
