@@ -12,14 +12,14 @@
         import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
         
         // TODO: Replace with your Firebase config
-const firebaseConfig = {
-    apiKey: "your-api-key-here",
-    authDomain: "your-project.firebaseapp.com",
-    projectId: "your-project-id",
-    storageBucket: "your-project.appspot.com",
-    messagingSenderId: "123456789",
-    appId: "your-app-id"
-};
+    const firebaseConfig = {
+      apiKey: "AIzaSyAKnXHWejoL5QYwg09boKMRLvlobQGKr7o",
+      authDomain: "my-calendar-app-e4c69.firebaseapp.com",
+      projectId: "my-calendar-app-e4c69",
+      storageBucket: "my-calendar-app-e4c69.firebasestorage.app",
+      messagingSenderId: "772407805545",
+      appId: "1:772407805545:web:1663020ec5b7bd154fc4f8"
+    };
 
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
@@ -197,6 +197,23 @@ const firebaseConfig = {
                     <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
                     <textarea id="eventDescription" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter event description"></textarea>
                 </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Repeat</label>
+                    <select id="eventRepeat" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="none">No repeat</option>
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="yearly">Yearly</option>
+                    </select>
+                </div>
+
+                <div id="repeatOptions" style="display: none;">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Repeat until</label>
+                    <input type="date" id="repeatUntil" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <p class="text-xs text-gray-500 mt-1">Leave empty to repeat indefinitely</p>
+                </div>
             </div>
 
             <div class="flex gap-3 mt-6">
@@ -290,7 +307,10 @@ const firebaseConfig = {
                             id: doc.id,
                             title: data.title,
                             time: data.time,
-                            description: data.description
+                            description: data.description,
+                            repeat: data.repeat,
+                            repeatUntil: data.repeatUntil,
+                            isRepeatingInstance: data.isRepeatingInstance || false
                         });
                     });
                     renderCalendar();
@@ -314,6 +334,9 @@ const firebaseConfig = {
                     title: eventData.title,
                     time: eventData.time,
                     description: eventData.description,
+                    repeat: eventData.repeat,
+                    repeatUntil: eventData.repeatUntil,
+                    isRepeatingInstance: false,
                     createdAt: new Date()
                 });
                 updateStatus('online', '☁️ Saved');
@@ -335,6 +358,8 @@ const firebaseConfig = {
                     title: eventData.title,
                     time: eventData.time,
                     description: eventData.description,
+                    repeat: eventData.repeat,
+                    repeatUntil: eventData.repeatUntil,
                     updatedAt: new Date()
                 });
                 updateStatus('online', '☁️ Updated');
@@ -380,6 +405,9 @@ const firebaseConfig = {
             document.getElementById('eventTitle').value = '';
             document.getElementById('eventTime').value = '';
             document.getElementById('eventDescription').value = '';
+            document.getElementById('eventRepeat').value = 'none';
+            document.getElementById('repeatUntil').value = '';
+            document.getElementById('repeatOptions').style.display = 'none';
             document.getElementById('modalTitle').textContent = 'Add New Event';
             document.getElementById('saveEventBtn').textContent = 'Save Event';
             editingEvent = null;
@@ -392,6 +420,13 @@ const firebaseConfig = {
             document.getElementById('eventTitle').value = event.title;
             document.getElementById('eventTime').value = event.time || '';
             document.getElementById('eventDescription').value = event.description || '';
+            document.getElementById('eventRepeat').value = event.repeat || 'none';
+            document.getElementById('repeatUntil').value = event.repeatUntil || '';
+            
+            // Show/hide repeat options
+            const repeatValue = event.repeat || 'none';
+            document.getElementById('repeatOptions').style.display = repeatValue !== 'none' ? 'block' : 'none';
+            
             document.getElementById('modalTitle').textContent = 'Edit Event';
             document.getElementById('saveEventBtn').textContent = 'Update Event';
             editingEvent = eventIndex;
@@ -404,7 +439,16 @@ const firebaseConfig = {
 
             const time = document.getElementById('eventTime').value;
             const description = document.getElementById('eventDescription').value;
-            const eventData = { title, time, description };
+            const repeat = document.getElementById('eventRepeat').value;
+            const repeatUntil = document.getElementById('repeatUntil').value;
+            
+            const eventData = { 
+                title, 
+                time, 
+                description, 
+                repeat: repeat !== 'none' ? repeat : null,
+                repeatUntil: repeatUntil || null
+            };
 
             if (isFirebaseConfigured) {
                 // Save to Firebase
@@ -413,6 +457,11 @@ const firebaseConfig = {
                     await updateEventInFirebase(event.id, eventData);
                 } else {
                     await saveEventToFirebase(selectedDate, eventData);
+                    
+                    // Create repeating instances if needed
+                    if (repeat !== 'none') {
+                        await createRepeatingEvents(selectedDate, eventData);
+                    }
                 }
             } else {
                 // Save to localStorage
@@ -424,6 +473,11 @@ const firebaseConfig = {
                     events[selectedDate][editingEvent] = eventData;
                 } else {
                     events[selectedDate].push(eventData);
+                    
+                    // Create repeating instances if needed
+                    if (repeat !== 'none') {
+                        createRepeatingEventsLocal(selectedDate, eventData);
+                    }
                 }
 
                 saveEventsToLocalStorage();
@@ -431,6 +485,97 @@ const firebaseConfig = {
             }
 
             closeModal();
+        }
+
+        // Repeating event functions
+        function getNextDate(dateString, repeatType) {
+            const date = new Date(dateString + 'T00:00:00');
+            
+            switch (repeatType) {
+                case 'daily':
+                    date.setDate(date.getDate() + 1);
+                    break;
+                case 'weekly':
+                    date.setDate(date.getDate() + 7);
+                    break;
+                case 'monthly':
+                    date.setMonth(date.getMonth() + 1);
+                    break;
+                case 'yearly':
+                    date.setFullYear(date.getFullYear() + 1);
+                    break;
+            }
+            
+            return formatDateKey(date.getFullYear(), date.getMonth(), date.getDate());
+        }
+
+        async function createRepeatingEvents(originalDateKey, eventData) {
+            if (!eventData.repeat || eventData.repeat === 'none') return;
+            
+            const endDate = eventData.repeatUntil ? new Date(eventData.repeatUntil + 'T23:59:59') : null;
+            const maxInstances = 365; // Prevent infinite loops, create up to 1 year of events
+            let currentDate = originalDateKey;
+            let instanceCount = 0;
+            
+            while (instanceCount < maxInstances) {
+                currentDate = getNextDate(currentDate, eventData.repeat);
+                const nextDate = new Date(currentDate + 'T00:00:00');
+                
+                // Stop if we've reached the end date
+                if (endDate && nextDate > endDate) break;
+                
+                // Stop if we're more than 2 years in the future
+                const twoYearsFromNow = new Date();
+                twoYearsFromNow.setFullYear(twoYearsFromNow.getFullYear() + 2);
+                if (nextDate > twoYearsFromNow) break;
+                
+                // Create the repeating instance
+                const repeatingEventData = {
+                    ...eventData,
+                    repeat: null, // Don't repeat the repeated instances
+                    repeatUntil: null,
+                    isRepeatingInstance: true
+                };
+                
+                await saveEventToFirebase(currentDate, repeatingEventData);
+                instanceCount++;
+            }
+        }
+
+        function createRepeatingEventsLocal(originalDateKey, eventData) {
+            if (!eventData.repeat || eventData.repeat === 'none') return;
+            
+            const endDate = eventData.repeatUntil ? new Date(eventData.repeatUntil + 'T23:59:59') : null;
+            const maxInstances = 365; // Prevent infinite loops
+            let currentDate = originalDateKey;
+            let instanceCount = 0;
+            
+            while (instanceCount < maxInstances) {
+                currentDate = getNextDate(currentDate, eventData.repeat);
+                const nextDate = new Date(currentDate + 'T00:00:00');
+                
+                // Stop if we've reached the end date
+                if (endDate && nextDate > endDate) break;
+                
+                // Stop if we're more than 2 years in the future
+                const twoYearsFromNow = new Date();
+                twoYearsFromNow.setFullYear(twoYearsFromNow.getFullYear() + 2);
+                if (nextDate > twoYearsFromNow) break;
+                
+                // Create the repeating instance
+                const repeatingEventData = {
+                    ...eventData,
+                    repeat: null, // Don't repeat the repeated instances
+                    repeatUntil: null,
+                    isRepeatingInstance: true
+                };
+                
+                if (!events[currentDate]) {
+                    events[currentDate] = [];
+                }
+                events[currentDate].push(repeatingEventData);
+                instanceCount++;
+            }
         }
 
         async function deleteEvent(dateKey, eventIndex) {
@@ -510,7 +655,10 @@ const firebaseConfig = {
 
                     const eventTitle = document.createElement('span');
                     eventTitle.className = 'truncate';
-                    eventTitle.textContent = event.title;
+                    
+                    // Add repeat indicator for repeating events
+                    const repeatIndicator = event.repeat || event.isRepeatingInstance ? '🔄 ' : '';
+                    eventTitle.textContent = repeatIndicator + event.title;
 
                     const eventActions = document.createElement('div');
                     eventActions.className = 'event-actions';
@@ -557,6 +705,12 @@ const firebaseConfig = {
         document.getElementById('eventTitle').addEventListener('input', function() {
             const saveBtn = document.getElementById('saveEventBtn');
             saveBtn.disabled = !this.value.trim();
+        });
+
+        // Show/hide repeat options based on repeat selection
+        document.getElementById('eventRepeat').addEventListener('change', function() {
+            const repeatOptions = document.getElementById('repeatOptions');
+            repeatOptions.style.display = this.value !== 'none' ? 'block' : 'none';
         });
 
         // Close modal when clicking outside
