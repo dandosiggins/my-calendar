@@ -3,8 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Interactive Calendar</title>
+    <title>My Cloud Calendar</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        
+        // TODO: Replace with your Firebase config
+const firebaseConfig = {
+    apiKey: "your-api-key-here",
+    authDomain: "your-project.firebaseapp.com",
+    projectId: "your-project-id",
+    storageBucket: "your-project.appspot.com",
+    messagingSenderId: "123456789",
+    appId: "your-app-id"
+};
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        
+        // Make Firebase functions globally available
+        window.db = db;
+        window.firestore = { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot };
+    </script>
+    
     <style>
         body {
             margin: 0;
@@ -81,17 +106,42 @@
             background-color: #d1d5db;
             cursor: not-allowed;
         }
+        .status-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            color: white;
+            font-size: 0.875rem;
+            z-index: 100;
+        }
+        .status-online {
+            background-color: #10b981;
+        }
+        .status-offline {
+            background-color: #ef4444;
+        }
+        .status-syncing {
+            background-color: #f59e0b;
+        }
     </style>
 </head>
 <body>
+    <!-- Status Indicator -->
+    <div id="statusIndicator" class="status-indicator status-offline">
+        📡 Setting up...
+    </div>
+
     <div class="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-lg">
         <!-- Header -->
         <div class="flex items-center justify-between mb-6">
             <div class="flex items-center gap-2">
                 <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 002 2z"></path>
                 </svg>
-                <h1 class="text-2xl font-bold text-gray-800">My Calendar</h1>
+                <h1 class="text-2xl font-bold text-gray-800">My Cloud Calendar</h1>
+                <div class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-medium">☁️ Cloud Synced</div>
             </div>
             <div class="flex items-center gap-4">
                 <button onclick="navigateMonth(-1)" class="p-2 hover:bg-gray-100 rounded-full transition-colors">
@@ -106,6 +156,19 @@
                     </svg>
                 </button>
             </div>
+        </div>
+
+        <!-- Setup Instructions (shown if Firebase not configured) -->
+        <div id="setupInstructions" class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+            <h3 class="text-lg font-semibold text-yellow-800 mb-2">🔧 Firebase Setup Required</h3>
+            <p class="text-yellow-700 mb-3">To enable cloud sync, please:</p>
+            <ol class="list-decimal list-inside text-yellow-700 space-y-1 text-sm">
+                <li>Create a Firebase project at <a href="https://firebase.google.com" target="_blank" class="underline">firebase.google.com</a></li>
+                <li>Set up Firestore database in test mode</li>
+                <li>Get your web app config from Project Settings</li>
+                <li>Replace the firebaseConfig object in the code</li>
+            </ol>
+            <p class="text-yellow-700 text-sm mt-3"><strong>Until then, your calendar will work with local storage only.</strong></p>
         </div>
 
         <!-- Calendar Grid -->
@@ -146,9 +209,11 @@
     <script>
         // Global variables
         let currentDate = new Date();
-        let events = JSON.parse(localStorage.getItem('calendarEvents') || '{}');
+        let events = {};
         let selectedDate = null;
         let editingEvent = null;
+        let isFirebaseConfigured = false;
+        let eventsListener = null;
 
         const monthNames = [
             'January', 'February', 'March', 'April', 'May', 'June',
@@ -156,6 +221,33 @@
         ];
 
         const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+        // Check if Firebase is properly configured
+        function checkFirebaseConfig() {
+            try {
+                if (window.db && window.firestore) {
+                    // Try to test Firebase connection
+                    const testCollection = window.firestore.collection(window.db, 'events');
+                    isFirebaseConfigured = true;
+                    updateStatus('online', '☁️ Connected');
+                    document.getElementById('setupInstructions').style.display = 'none';
+                    loadEventsFromFirebase();
+                } else {
+                    throw new Error('Firebase not configured');
+                }
+            } catch (error) {
+                console.log('Firebase not configured, using localStorage');
+                isFirebaseConfigured = false;
+                updateStatus('offline', '💾 Local Only');
+                loadEventsFromLocalStorage();
+            }
+        }
+
+        function updateStatus(status, text) {
+            const indicator = document.getElementById('statusIndicator');
+            indicator.className = `status-indicator status-${status}`;
+            indicator.textContent = text;
+        }
 
         // Utility functions
         function getDaysInMonth(date) {
@@ -178,7 +270,101 @@
                    day === today.getDate();
         }
 
-        function saveEventsToStorage() {
+        // Firebase functions
+        async function loadEventsFromFirebase() {
+            if (!isFirebaseConfigured) return;
+            
+            try {
+                updateStatus('syncing', '⏳ Loading...');
+                
+                // Set up real-time listener
+                const eventsCollection = window.firestore.collection(window.db, 'events');
+                eventsListener = window.firestore.onSnapshot(eventsCollection, (snapshot) => {
+                    events = {};
+                    snapshot.forEach((doc) => {
+                        const data = doc.data();
+                        if (!events[data.date]) {
+                            events[data.date] = [];
+                        }
+                        events[data.date].push({
+                            id: doc.id,
+                            title: data.title,
+                            time: data.time,
+                            description: data.description
+                        });
+                    });
+                    renderCalendar();
+                    updateStatus('online', '☁️ Synced');
+                });
+            } catch (error) {
+                console.error('Error loading from Firebase:', error);
+                updateStatus('offline', '❌ Sync Error');
+                loadEventsFromLocalStorage();
+            }
+        }
+
+        async function saveEventToFirebase(dateKey, eventData) {
+            if (!isFirebaseConfigured) return null;
+            
+            try {
+                updateStatus('syncing', '⏳ Saving...');
+                const eventsCollection = window.firestore.collection(window.db, 'events');
+                const docRef = await window.firestore.addDoc(eventsCollection, {
+                    date: dateKey,
+                    title: eventData.title,
+                    time: eventData.time,
+                    description: eventData.description,
+                    createdAt: new Date()
+                });
+                updateStatus('online', '☁️ Saved');
+                return docRef.id;
+            } catch (error) {
+                console.error('Error saving to Firebase:', error);
+                updateStatus('offline', '❌ Save Error');
+                return null;
+            }
+        }
+
+        async function updateEventInFirebase(eventId, eventData) {
+            if (!isFirebaseConfigured) return;
+            
+            try {
+                updateStatus('syncing', '⏳ Updating...');
+                const eventDoc = window.firestore.doc(window.db, 'events', eventId);
+                await window.firestore.updateDoc(eventDoc, {
+                    title: eventData.title,
+                    time: eventData.time,
+                    description: eventData.description,
+                    updatedAt: new Date()
+                });
+                updateStatus('online', '☁️ Updated');
+            } catch (error) {
+                console.error('Error updating Firebase:', error);
+                updateStatus('offline', '❌ Update Error');
+            }
+        }
+
+        async function deleteEventFromFirebase(eventId) {
+            if (!isFirebaseConfigured) return;
+            
+            try {
+                updateStatus('syncing', '⏳ Deleting...');
+                const eventDoc = window.firestore.doc(window.db, 'events', eventId);
+                await window.firestore.deleteDoc(eventDoc);
+                updateStatus('online', '☁️ Deleted');
+            } catch (error) {
+                console.error('Error deleting from Firebase:', error);
+                updateStatus('offline', '❌ Delete Error');
+            }
+        }
+
+        // Local storage fallback functions
+        function loadEventsFromLocalStorage() {
+            events = JSON.parse(localStorage.getItem('calendarEvents') || '{}');
+            renderCalendar();
+        }
+
+        function saveEventsToLocalStorage() {
             localStorage.setItem('calendarEvents', JSON.stringify(events));
         }
 
@@ -212,37 +398,54 @@
             document.getElementById('eventModal').style.display = 'flex';
         }
 
-        function saveEvent() {
+        async function saveEvent() {
             const title = document.getElementById('eventTitle').value.trim();
             if (!title) return;
 
             const time = document.getElementById('eventTime').value;
             const description = document.getElementById('eventDescription').value;
-
-            if (!events[selectedDate]) {
-                events[selectedDate] = [];
-            }
-
             const eventData = { title, time, description };
 
-            if (editingEvent !== null) {
-                events[selectedDate][editingEvent] = eventData;
+            if (isFirebaseConfigured) {
+                // Save to Firebase
+                if (editingEvent !== null) {
+                    const event = events[selectedDate][editingEvent];
+                    await updateEventInFirebase(event.id, eventData);
+                } else {
+                    await saveEventToFirebase(selectedDate, eventData);
+                }
             } else {
-                events[selectedDate].push(eventData);
+                // Save to localStorage
+                if (!events[selectedDate]) {
+                    events[selectedDate] = [];
+                }
+
+                if (editingEvent !== null) {
+                    events[selectedDate][editingEvent] = eventData;
+                } else {
+                    events[selectedDate].push(eventData);
+                }
+
+                saveEventsToLocalStorage();
+                renderCalendar();
             }
 
-            saveEventsToStorage();
             closeModal();
-            renderCalendar();
         }
 
-        function deleteEvent(dateKey, eventIndex) {
-            events[dateKey].splice(eventIndex, 1);
-            if (events[dateKey].length === 0) {
-                delete events[dateKey];
+        async function deleteEvent(dateKey, eventIndex) {
+            const event = events[dateKey][eventIndex];
+
+            if (isFirebaseConfigured && event.id) {
+                await deleteEventFromFirebase(event.id);
+            } else {
+                events[dateKey].splice(eventIndex, 1);
+                if (events[dateKey].length === 0) {
+                    delete events[dateKey];
+                }
+                saveEventsToLocalStorage();
+                renderCalendar();
             }
-            saveEventsToStorage();
-            renderCalendar();
         }
 
         function closeModal() {
@@ -354,11 +557,6 @@
         document.getElementById('eventTitle').addEventListener('input', function() {
             const saveBtn = document.getElementById('saveEventBtn');
             saveBtn.disabled = !this.value.trim();
-            if (saveBtn.disabled) {
-                saveBtn.className = saveBtn.className.replace('btn-primary', 'btn').replace('hover:bg-blue-700', '');
-            } else {
-                saveBtn.className = saveBtn.className.replace(/btn(?!\-)/g, 'btn-primary');
-            }
         });
 
         // Close modal when clicking outside
@@ -369,7 +567,17 @@
         });
 
         // Initialize calendar
-        renderCalendar();
+        setTimeout(() => {
+            checkFirebaseConfig();
+            renderCalendar();
+        }, 1000);
+
+        // Cleanup listener when page unloads
+        window.addEventListener('beforeunload', () => {
+            if (eventsListener) {
+                eventsListener();
+            }
+        });
     </script>
 </body>
 </html>
