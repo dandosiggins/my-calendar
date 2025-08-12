@@ -11,6 +11,7 @@
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
         
+        // TODO: Replace with your Firebase config
         const firebaseConfig = {
           apiKey: "AIzaSyAKnXHWejoL5QYwg09boKMRLvlobQGKr7o",
           authDomain: "my-calendar-app-e4c69.firebaseapp.com",
@@ -53,61 +54,18 @@
             align-items: center;
             border-left: 3px solid;
         }
-        .event-work {
-            background-color: #dbeafe;
-            color: #1e40af;
-            border-left-color: #2563eb;
-        }
-        .event-personal {
-            background-color: #dcfce7;
-            color: #166534;
-            border-left-color: #16a34a;
-        }
-        .event-health {
-            background-color: #fef3c7;
-            color: #92400e;
-            border-left-color: #d97706;
-        }
-        .event-social {
-            background-color: #fce7f3;
-            color: #be185d;
-            border-left-color: #ec4899;
-        }
-        .event-finance {
-            background-color: #f3e8ff;
-            color: #7c3aed;
-            border-left-color: #8b5cf6;
-        }
-        .event-travel {
-            background-color: #ecfdf5;
-            color: #047857;
-            border-left-color: #10b981;
-        }
-        .event-education {
-            background-color: #fef2f2;
-            color: #dc2626;
-            border-left-color: #ef4444;
-        }
-        .event-other {
-            background-color: #f1f5f9;
-            color: #475569;
-            border-left-color: #64748b;
-        }
-        .event-guitar {
-            background-color: #fef7cd;
-            color: #a16207;
-            border-left-color: #eab308;
-        }
-        .event-kj {
-            background-color: #e0e7ff;
-            color: #3730a3;
-            border-left-color: #6366f1;
-        }
-        .event-daniel {
-            background-color: #ecfccb;
-            color: #365314;
-            border-left-color: #65a30d;
-        }
+        .event-work { background-color: #dbeafe; color: #1e40af; border-left-color: #2563eb; }
+        .event-personal { background-color: #dcfce7; color: #166534; border-left-color: #16a34a; }
+        .event-health { background-color: #fef3c7; color: #92400e; border-left-color: #d97706; }
+        .event-social { background-color: #fce7f3; color: #be185d; border-left-color: #ec4899; }
+        .event-finance { background-color: #f3e8ff; color: #7c3aed; border-left-color: #8b5cf6; }
+        .event-travel { background-color: #ecfdf5; color: #047857; border-left-color: #10b981; }
+        .event-education { background-color: #fef2f2; color: #dc2626; border-left-color: #ef4444; }
+        .event-guitar { background-color: #fef7cd; color: #a16207; border-left-color: #eab308; }
+        .event-kj { background-color: #e0e7ff; color: #3730a3; border-left-color: #6366f1; }
+        .event-daniel { background-color: #ecfccb; color: #365314; border-left-color: #65a30d; }
+        .event-other { background-color: #f1f5f9; color: #475569; border-left-color: #64748b; }
+        
         .event-actions {
             display: none;
             gap: 0.25rem;
@@ -308,6 +266,46 @@
         </div>
     </div>
 
+    <!-- Day View Modal -->
+    <div id="dayViewModal" class="modal-overlay" style="display: none;">
+        <div class="modal" style="width: 32rem; max-width: 95vw;">
+            <div class="flex items-center justify-between mb-4">
+                <h3 id="dayViewTitle" class="text-lg font-semibold text-gray-800"></h3>
+                <button onclick="closeDayView()" class="text-gray-500 hover:text-gray-700 text-xl">×</button>
+            </div>
+            
+            <div class="space-y-4">
+                <!-- Quick Add Event Section -->
+                <div class="bg-blue-50 p-3 rounded-lg border">
+                    <button onclick="openEventModalFromDay()" class="w-full flex items-center justify-center gap-2 text-blue-700 hover:text-blue-800 font-medium">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        Add Event for This Day
+                    </button>
+                </div>
+
+                <!-- Events List -->
+                <div id="dayEventsList" class="space-y-2">
+                    <!-- Events will be populated by JavaScript -->
+                </div>
+
+                <!-- Empty State -->
+                <div id="dayEventsEmpty" class="text-center py-8 text-gray-500" style="display: none;">
+                    <svg class="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 002 2z"></path>
+                    </svg>
+                    <p class="text-sm">No events scheduled</p>
+                    <p class="text-xs text-gray-400 mt-1">Click "Add Event" to create your first event for this day</p>
+                </div>
+            </div>
+
+            <div class="mt-6 pt-4 border-t border-gray-200">
+                <button onclick="closeDayView()" class="w-full btn btn-secondary">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Event Modal -->
     <div id="eventModal" class="modal-overlay" style="display: none;">
         <div class="modal">
@@ -368,81 +366,6 @@
                 <button id="saveEventBtn" onclick="saveEvent()" class="flex-1 btn btn-primary">Save Event</button>
                 <button onclick="closeModal()" class="flex-1 btn btn-secondary">Cancel</button>
             </div>
-
-            <!-- Delete Series Button (shown only for repeating events) -->
-            <div id="deleteSeriesSection" class="mt-4 pt-4 border-t border-gray-200" style="display: none;">
-                <button id="deleteSeriesBtn" onclick="showDeleteSeriesConfirm()" class="w-full btn btn-danger text-sm">
-                    🗑️ Delete Entire Series
-                </button>
-                <p class="text-xs text-gray-500 mt-2 text-center">This will delete all past and future occurrences of this repeating event</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Delete Series Confirmation Modal -->
-    <div id="deleteSeriesModal" class="modal-overlay" style="display: none;">
-        <div class="modal">
-            <h3 class="text-lg font-semibold mb-4 text-red-600">⚠️ Delete Entire Series?</h3>
-            
-            <div class="space-y-4">
-                <p class="text-gray-700">Are you sure you want to delete the entire series:</p>
-                <div class="bg-red-50 p-3 rounded border-l-4 border-red-400">
-                    <p id="seriesEventTitle" class="font-medium text-red-800"></p>
-                    <p id="seriesEventDetails" class="text-sm text-red-600"></p>
-                </div>
-                <p class="text-sm text-gray-600">This will permanently delete:</p>
-                <ul class="text-sm text-gray-600 list-disc list-inside ml-4">
-                    <li>The original repeating event</li>
-                    <li>All past occurrences</li>
-                    <li>All future occurrences</li>
-                </ul>
-                <p class="text-sm font-medium text-red-600">This action cannot be undone!</p>
-            </div>
-
-            <div class="flex gap-3 mt-6">
-                <button onclick="confirmDeleteSeries()" class="flex-1 btn btn-danger">Yes, Delete Series</button>
-                <button onclick="closeDeleteSeriesModal()" class="flex-1 btn btn-secondary">Cancel</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Day View Modal -->
-    <div id="dayViewModal" class="modal-overlay" style="display: none;">
-        <div class="modal" style="width: 32rem; max-width: 95vw;">
-            <div class="flex items-center justify-between mb-4">
-                <h3 id="dayViewTitle" class="text-lg font-semibold text-gray-800"></h3>
-                <button onclick="closeDayView()" class="text-gray-500 hover:text-gray-700 text-xl">×</button>
-            </div>
-            
-            <div class="space-y-4">
-                <!-- Quick Add Event Section -->
-                <div class="bg-blue-50 p-3 rounded-lg border">
-                    <button id="quickAddBtn" onclick="openEventModalFromDay()" class="w-full flex items-center justify-center gap-2 text-blue-700 hover:text-blue-800 font-medium">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                        </svg>
-                        Add Event for This Day
-                    </button>
-                </div>
-
-                <!-- Events List -->
-                <div id="dayEventsList" class="space-y-2">
-                    <!-- Events will be populated by JavaScript -->
-                </div>
-
-                <!-- Empty State -->
-                <div id="dayEventsEmpty" class="text-center py-8 text-gray-500" style="display: none;">
-                    <svg class="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 002 2z"></path>
-                    </svg>
-                    <p class="text-sm">No events scheduled</p>
-                    <p class="text-xs text-gray-400 mt-1">Click "Add Event" to create your first event for this day</p>
-                </div>
-            </div>
-
-            <div class="mt-6 pt-4 border-t border-gray-200">
-                <button onclick="closeDayView()" class="w-full btn btn-secondary">Close</button>
-            </div>
         </div>
     </div>
 
@@ -451,14 +374,13 @@
         let currentDate = new Date();
         let events = {};
         let selectedDate = null;
+        let selectedDayForView = null;
         let editingEvent = null;
         let isFirebaseConfigured = false;
         let eventsListener = null;
         let currentCategoryFilter = 'all';
-        let seriesDeleteTarget = null; // For tracking which series to delete
-        let selectedDayForView = null; // For day view modal
 
-        // Event categories with their properties
+        // Event categories
         const eventCategories = {
             work: { name: 'Work', icon: '💼', color: 'blue' },
             personal: { name: 'Personal', icon: '🏠', color: 'green' },
@@ -480,66 +402,7 @@
 
         const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-        // Check if Firebase is properly configured
-        function checkFirebaseConfig() {
-            try {
-                if (window.db && window.firestore) {
-                    // Try to test Firebase connection
-                    const testCollection = window.firestore.collection(window.db, 'events');
-                    isFirebaseConfigured = true;
-                    updateStatus('online', '☁️ Connected');
-                    document.getElementById('setupInstructions').style.display = 'none';
-                    loadEventsFromFirebase();
-                } else {
-                    throw new Error('Firebase not configured');
-                }
-            } catch (error) {
-                console.log('Firebase not configured, using localStorage');
-                isFirebaseConfigured = false;
-                updateStatus('offline', '💾 Local Only');
-                loadEventsFromLocalStorage();
-            }
-        }
-
-        // Category filtering functions
-        function applyCategoryFilter(category) {
-            currentCategoryFilter = category;
-            document.getElementById('categoryFilter').value = category;
-            renderCalendar();
-            
-            // Update visual feedback
-            updateFilterStatus();
-        }
-
-        function clearCategoryFilter() {
-            currentCategoryFilter = 'all';
-            document.getElementById('categoryFilter').value = 'all';
-            renderCalendar();
-            updateFilterStatus();
-        }
-
-        function updateFilterStatus() {
-            const filterSelect = document.getElementById('categoryFilter');
-            const clearBtn = document.getElementById('clearFilter');
-            
-            if (currentCategoryFilter !== 'all') {
-                filterSelect.style.backgroundColor = '#dbeafe';
-                filterSelect.style.borderColor = '#2563eb';
-                clearBtn.style.display = 'inline-block';
-            } else {
-                filterSelect.style.backgroundColor = 'white';
-                filterSelect.style.borderColor = '#d1d5db';
-                clearBtn.style.display = 'none';
-            }
-        }
-
-        function updateStatus(status, text) {
-            const indicator = document.getElementById('statusIndicator');
-            indicator.className = `status-indicator status-${status}`;
-            indicator.textContent = text;
-        }
-
-        // Utility functions
+        // Basic calendar functions
         function getDaysInMonth(date) {
             return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
         }
@@ -560,113 +423,10 @@
                    day === today.getDate();
         }
 
-        // Firebase functions
-        async function loadEventsFromFirebase() {
-            if (!isFirebaseConfigured) return;
-            
-            try {
-                updateStatus('syncing', '⏳ Loading...');
-                
-                // Set up real-time listener
-                const eventsCollection = window.firestore.collection(window.db, 'events');
-                eventsListener = window.firestore.onSnapshot(eventsCollection, (snapshot) => {
-                    events = {};
-                    snapshot.forEach((doc) => {
-                        const data = doc.data();
-                        if (!events[data.date]) {
-                            events[data.date] = [];
-                        }
-                        events[data.date].push({
-                            id: doc.id,
-                            title: data.title,
-                            category: data.category || 'work',
-                            time: data.time,
-                            description: data.description,
-                            repeat: data.repeat,
-                            repeatUntil: data.repeatUntil,
-                            isRepeatingInstance: data.isRepeatingInstance || false
-                        });
-                    });
-                    renderCalendar();
-                    updateStatus('online', '☁️ Synced');
-                });
-            } catch (error) {
-                console.error('Error loading from Firebase:', error);
-                updateStatus('offline', '❌ Sync Error');
-                loadEventsFromLocalStorage();
-            }
-        }
-
-        async function saveEventToFirebase(dateKey, eventData) {
-            if (!isFirebaseConfigured) return null;
-            
-            try {
-                updateStatus('syncing', '⏳ Saving...');
-                const eventsCollection = window.firestore.collection(window.db, 'events');
-                const docRef = await window.firestore.addDoc(eventsCollection, {
-                    date: dateKey,
-                    title: eventData.title,
-                    category: eventData.category,
-                    time: eventData.time,
-                    description: eventData.description,
-                    repeat: eventData.repeat,
-                    repeatUntil: eventData.repeatUntil,
-                    isRepeatingInstance: false,
-                    createdAt: new Date()
-                });
-                updateStatus('online', '☁️ Saved');
-                return docRef.id;
-            } catch (error) {
-                console.error('Error saving to Firebase:', error);
-                updateStatus('offline', '❌ Save Error');
-                return null;
-            }
-        }
-
-        async function updateEventInFirebase(eventId, eventData) {
-            if (!isFirebaseConfigured) return;
-            
-            try {
-                updateStatus('syncing', '⏳ Updating...');
-                const eventDoc = window.firestore.doc(window.db, 'events', eventId);
-                await window.firestore.updateDoc(eventDoc, {
-                    title: eventData.title,
-                    category: eventData.category,
-                    time: eventData.time,
-                    description: eventData.description,
-                    repeat: eventData.repeat,
-                    repeatUntil: eventData.repeatUntil,
-                    updatedAt: new Date()
-                });
-                updateStatus('online', '☁️ Updated');
-            } catch (error) {
-                console.error('Error updating Firebase:', error);
-                updateStatus('offline', '❌ Update Error');
-            }
-        }
-
-        async function deleteEventFromFirebase(eventId) {
-            if (!isFirebaseConfigured) return;
-            
-            try {
-                updateStatus('syncing', '⏳ Deleting...');
-                const eventDoc = window.firestore.doc(window.db, 'events', eventId);
-                await window.firestore.deleteDoc(eventDoc);
-                updateStatus('online', '☁️ Deleted');
-            } catch (error) {
-                console.error('Error deleting from Firebase:', error);
-                updateStatus('offline', '❌ Delete Error');
-            }
-        }
-
-        // Local storage fallback functions
-        function loadEventsFromLocalStorage() {
-            events = JSON.parse(localStorage.getItem('calendarEvents') || '{}');
-            renderCalendar();
-        }
-
-        function saveEventsToLocalStorage() {
-            localStorage.setItem('calendarEvents', JSON.stringify(events));
+        function updateStatus(status, text) {
+            const indicator = document.getElementById('statusIndicator');
+            indicator.className = `status-indicator status-${status}`;
+            indicator.textContent = text;
         }
 
         // Navigation
@@ -675,7 +435,158 @@
             renderCalendar();
         }
 
-        // Event management
+        // Event data functions
+        function getAllDayEvents(day) {
+            if (!day) return [];
+            const dateKey = formatDateKey(currentDate.getFullYear(), currentDate.getMonth(), day);
+            return events[dateKey] || [];
+        }
+
+        function getDayEvents(day) {
+            const dayEvents = getAllDayEvents(day);
+            if (currentCategoryFilter === 'all') {
+                return dayEvents;
+            } else {
+                return dayEvents.filter(event => (event.category || 'work') === currentCategoryFilter);
+            }
+        }
+
+        function saveEventsToLocalStorage() {
+            localStorage.setItem('calendarEvents', JSON.stringify(events));
+        }
+
+        function loadEventsFromLocalStorage() {
+            events = JSON.parse(localStorage.getItem('calendarEvents') || '{}');
+            renderCalendar();
+        }
+
+        // Day view functions
+        function openDayView(day) {
+            selectedDayForView = day;
+            selectedDate = formatDateKey(currentDate.getFullYear(), currentDate.getMonth(), day);
+            
+            const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const formattedDate = date.toLocaleDateString('en-US', options);
+            
+            document.getElementById('dayViewTitle').textContent = formattedDate;
+            populateDayEventsList();
+            document.getElementById('dayViewModal').style.display = 'flex';
+        }
+
+        function populateDayEventsList() {
+            const eventsList = document.getElementById('dayEventsList');
+            const emptyState = document.getElementById('dayEventsEmpty');
+            const dayEvents = getAllDayEvents(selectedDayForView);
+            
+            eventsList.innerHTML = '';
+            
+            if (dayEvents.length === 0) {
+                eventsList.style.display = 'none';
+                emptyState.style.display = 'block';
+                return;
+            }
+            
+            eventsList.style.display = 'block';
+            emptyState.style.display = 'none';
+            
+            // Sort events by time
+            const sortedEvents = [...dayEvents].sort((a, b) => {
+                if (a.time && !b.time) return -1;
+                if (!a.time && b.time) return 1;
+                if (a.time && b.time) return a.time.localeCompare(b.time);
+                return 0;
+            });
+            
+            sortedEvents.forEach((event, eventIndex) => {
+                const eventDiv = document.createElement('div');
+                const category = event.category || 'work';
+                eventDiv.className = `event-item event-${category} cursor-pointer group`;
+                
+                const eventContent = document.createElement('div');
+                eventContent.className = 'flex-1 min-w-0';
+                
+                const eventTitle = document.createElement('div');
+                eventTitle.className = 'font-medium truncate';
+                const repeatIndicator = event.repeat || event.isRepeatingInstance ? '🔄 ' : '';
+                const categoryIcon = eventCategories[category]?.icon || '📝';
+                eventTitle.textContent = `${repeatIndicator}${categoryIcon} ${event.title}`;
+                
+                eventContent.appendChild(eventTitle);
+                
+                // Event details
+                let detailsText = '';
+                if (event.time) detailsText += `⏰ ${formatTime(event.time)}`;
+                if (event.description) {
+                    if (detailsText) detailsText += ' • ';
+                    detailsText += event.description.length > 30 ? 
+                        event.description.substring(0, 30) + '...' : 
+                        event.description;
+                }
+                if (detailsText) {
+                    const eventDetails = document.createElement('div');
+                    eventDetails.className = 'text-xs opacity-75 mt-1';
+                    eventDetails.textContent = detailsText;
+                    eventContent.appendChild(eventDetails);
+                }
+                
+                // Event actions
+                const eventActions = document.createElement('div');
+                eventActions.className = 'flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity';
+                
+                const editBtn = document.createElement('button');
+                editBtn.innerHTML = '✏️';
+                editBtn.className = 'p-1 hover:bg-white hover:bg-opacity-50 rounded text-xs';
+                editBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    closeDayView();
+                    setTimeout(() => editEvent(selectedDate, eventIndex), 100);
+                };
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.innerHTML = '🗑️';
+                deleteBtn.className = 'p-1 hover:bg-white hover:bg-opacity-50 rounded text-xs';
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    deleteEvent(selectedDate, eventIndex);
+                    setTimeout(() => populateDayEventsList(), 100);
+                };
+                
+                eventActions.appendChild(editBtn);
+                eventActions.appendChild(deleteBtn);
+                
+                eventDiv.appendChild(eventContent);
+                eventDiv.appendChild(eventActions);
+                
+                eventDiv.onclick = () => {
+                    closeDayView();
+                    setTimeout(() => editEvent(selectedDate, eventIndex), 100);
+                };
+                
+                eventsList.appendChild(eventDiv);
+            });
+        }
+
+        function formatTime(timeString) {
+            if (!timeString) return '';
+            const [hours, minutes] = timeString.split(':');
+            const hour = parseInt(hours);
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+            return `${displayHour}:${minutes} ${ampm}`;
+        }
+
+        function closeDayView() {
+            document.getElementById('dayViewModal').style.display = 'none';
+            selectedDayForView = null;
+        }
+
+        // Event modal functions
+        function openEventModalFromDay() {
+            closeDayView();
+            setTimeout(() => openEventModal(selectedDayForView), 100);
+        }
+
         function openEventModal(day) {
             selectedDate = formatDateKey(currentDate.getFullYear(), currentDate.getMonth(), day);
             document.getElementById('eventTitle').value = '';
@@ -701,19 +612,8 @@
             document.getElementById('eventRepeat').value = event.repeat || 'none';
             document.getElementById('repeatUntil').value = event.repeatUntil || '';
             
-            // Show/hide repeat options
             const repeatValue = event.repeat || 'none';
             document.getElementById('repeatOptions').style.display = repeatValue !== 'none' ? 'block' : 'none';
-            
-            // Show/hide delete series button
-            const deleteSeriesSection = document.getElementById('deleteSeriesSection');
-            if (event.repeat || event.isRepeatingInstance) {
-                deleteSeriesSection.style.display = 'block';
-                seriesDeleteTarget = { dateKey, eventIndex, event };
-            } else {
-                deleteSeriesSection.style.display = 'none';
-                seriesDeleteTarget = null;
-            }
             
             document.getElementById('modalTitle').textContent = 'Edit Event';
             document.getElementById('saveEventBtn').textContent = 'Update Event';
@@ -721,7 +621,7 @@
             document.getElementById('eventModal').style.display = 'flex';
         }
 
-        async function saveEvent() {
+        function saveEvent() {
             const title = document.getElementById('eventTitle').value.trim();
             if (!title) return;
 
@@ -740,41 +640,38 @@
                 repeatUntil: repeatUntil || null
             };
 
-            if (isFirebaseConfigured) {
-                // Save to Firebase
-                if (editingEvent !== null) {
-                    const event = events[selectedDate][editingEvent];
-                    await updateEventInFirebase(event.id, eventData);
-                } else {
-                    await saveEventToFirebase(selectedDate, eventData);
-                    
-                    // Create repeating instances if needed
-                    if (repeat !== 'none') {
-                        await createRepeatingEvents(selectedDate, eventData);
-                    }
-                }
-            } else {
-                // Save to localStorage
-                if (!events[selectedDate]) {
-                    events[selectedDate] = [];
-                }
-
-                if (editingEvent !== null) {
-                    events[selectedDate][editingEvent] = eventData;
-                } else {
-                    events[selectedDate].push(eventData);
-                    
-                    // Create repeating instances if needed
-                    if (repeat !== 'none') {
-                        createRepeatingEventsLocal(selectedDate, eventData);
-                    }
-                }
-
-                saveEventsToLocalStorage();
-                renderCalendar();
+            // Always use localStorage for now
+            if (!events[selectedDate]) {
+                events[selectedDate] = [];
             }
 
+            if (editingEvent !== null) {
+                events[selectedDate][editingEvent] = eventData;
+            } else {
+                events[selectedDate].push(eventData);
+                
+                // Create repeating instances if needed
+                if (repeat !== 'none') {
+                    createRepeatingEventsLocal(selectedDate, eventData);
+                }
+            }
+
+            saveEventsToLocalStorage();
+            renderCalendar();
             closeModal();
+        }
+
+        function deleteEvent(dateKey, eventIndex) {
+            events[dateKey].splice(eventIndex, 1);
+            if (events[dateKey].length === 0) {
+                delete events[dateKey];
+            }
+            saveEventsToLocalStorage();
+            renderCalendar();
+        }
+
+        function closeModal() {
+            document.getElementById('eventModal').style.display = 'none';
         }
 
         // Repeating event functions
@@ -799,294 +696,11 @@
             return formatDateKey(date.getFullYear(), date.getMonth(), date.getDate());
         }
 
-        async function createRepeatingEvents(originalDateKey, eventData) {
-            if (!eventData.repeat || eventData.repeat === 'none') return;
-            
-            const endDate = eventData.repeatUntil ? new Date(eventData.repeatUntil + 'T23:59:59') : null;
-            const maxInstances = 365; // Prevent infinite loops, create up to 1 year of events
-            let currentDate = originalDateKey;
-            let instanceCount = 0;
-            
-            while (instanceCount < maxInstances) {
-                currentDate = getNextDate(currentDate, eventData.repeat);
-                const nextDate = new Date(currentDate + 'T00:00:00');
-                
-                // Stop if we've reached the end date
-                if (endDate && nextDate > endDate) break;
-                
-                // Stop if we're more than 2 years in the future
-                const twoYearsFromNow = new Date();
-                twoYearsFromNow.setFullYear(twoYearsFromNow.getFullYear() + 2);
-                if (nextDate > twoYearsFromNow) break;
-                
-                // Create the repeating instance
-                const repeatingEventData = {
-                    ...eventData,
-                    repeat: null, // Don't repeat the repeated instances
-                    repeatUntil: null,
-                    isRepeatingInstance: true
-                };
-                
-                await saveEventToFirebase(currentDate, repeatingEventData);
-                instanceCount++;
-            }
-        }
-
-        // Series deletion functions
-        function showDeleteSeriesConfirm() {
-            if (!seriesDeleteTarget) return;
-            
-            const event = seriesDeleteTarget.event;
-            const categoryIcon = eventCategories[event.category || 'work']?.icon || '📝';
-            const repeatText = event.repeat ? `Repeats ${event.repeat}` : 'Repeating event';
-            
-            document.getElementById('seriesEventTitle').textContent = `${categoryIcon} ${event.title}`;
-            document.getElementById('seriesEventDetails').textContent = repeatText;
-            document.getElementById('deleteSeriesModal').style.display = 'flex';
-        }
-
-        function closeDeleteSeriesModal() {
-            document.getElementById('deleteSeriesModal').style.display = 'none';
-        }
-
-        async function confirmDeleteSeries() {
-            if (!seriesDeleteTarget) return;
-            
-            const { event } = seriesDeleteTarget;
-            
-            if (isFirebaseConfigured) {
-                await deleteSeriesFromFirebase(event);
-            } else {
-                deleteSeriesFromLocalStorage(event);
-            }
-            
-            closeDeleteSeriesModal();
-            closeModal();
-            renderCalendar();
-        }
-
-        async function deleteSeriesFromFirebase(targetEvent) {
-            if (!isFirebaseConfigured) return;
-            
-            try {
-                updateStatus('syncing', '⏳ Deleting series...');
-                
-                // Get all events from Firebase
-                const eventsCollection = window.firestore.collection(window.db, 'events');
-                const snapshot = await window.firestore.getDocs(eventsCollection);
-                
-                const deletePromises = [];
-                
-                snapshot.forEach((doc) => {
-                    const data = doc.data();
-                    const shouldDelete = 
-                        // Delete the original event (has same title and repeat setting)
-                        (data.title === targetEvent.title && data.repeat === targetEvent.repeat) ||
-                        // Delete repeating instances (same title and is a repeating instance)
-                        (data.title === targetEvent.title && data.isRepeatingInstance);
-                    
-                    if (shouldDelete) {
-                        deletePromises.push(window.firestore.deleteDoc(doc.ref));
-                    }
-                });
-                
-                await Promise.all(deletePromises);
-                updateStatus('online', '☁️ Series deleted');
-                
-            } catch (error) {
-                console.error('Error deleting series from Firebase:', error);
-                updateStatus('offline', '❌ Delete series error');
-            }
-        }
-
-        function deleteSeriesFromLocalStorage(targetEvent) {
-            // Remove all events with the same title (both original and instances)
-            Object.keys(events).forEach(dateKey => {
-                events[dateKey] = events[dateKey].filter(event => 
-                    event.title !== targetEvent.title
-                );
-                
-                // Clean up empty date entries
-                if (events[dateKey].length === 0) {
-                    delete events[dateKey];
-                }
-            });
-            
-            saveEventsToLocalStorage();
-        }
-
-        // Day view functions
-        function openDayView(day) {
-            selectedDayForView = day;
-            const dateKey = formatDateKey(currentDate.getFullYear(), currentDate.getMonth(), day);
-            const dayEvents = getAllDayEvents(day);
-            
-            // Set title with date formatting
-            const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            const formattedDate = date.toLocaleDateString('en-US', options);
-            
-            document.getElementById('dayViewTitle').textContent = formattedDate;
-            
-            // Store the selected date for creating new events
-            selectedDate = dateKey;
-            
-            // Populate events list
-            populateDayEventsList(dayEvents, dateKey);
-            
-            // Show modal
-            document.getElementById('dayViewModal').style.display = 'flex';
-        }
-
-        function populateDayEventsList(dayEvents, dateKey) {
-            const eventsList = document.getElementById('dayEventsList');
-            const emptyState = document.getElementById('dayEventsEmpty');
-            
-            if (!eventsList || !emptyState) {
-                console.error('Day view elements not found');
-                return;
-            }
-            
-            // Clear existing events
-            eventsList.innerHTML = '';
-            
-            if (dayEvents.length === 0) {
-                eventsList.style.display = 'none';
-                emptyState.style.display = 'block';
-                return;
-            }
-            
-            eventsList.style.display = 'block';
-            emptyState.style.display = 'none';
-            
-            // Sort events by time (events with time first, then no-time events)
-            const sortedEvents = [...dayEvents].sort((a, b) => {
-                if (a.time && !b.time) return -1;
-                if (!a.time && b.time) return 1;
-                if (a.time && b.time) return a.time.localeCompare(b.time);
-                return 0;
-            });
-            
-            sortedEvents.forEach((event, eventIndex) => {
-                const eventDiv = document.createElement('div');
-                const category = event.category || 'work';
-                eventDiv.className = `event-item event-${category} hover:shadow-sm transition-shadow cursor-pointer group`;
-                
-                // Event content container
-                const eventContent = document.createElement('div');
-                eventContent.className = 'flex-1 min-w-0';
-                
-                // Event title with icons
-                const eventTitle = document.createElement('div');
-                eventTitle.className = 'font-medium truncate';
-                const repeatIndicator = event.repeat || event.isRepeatingInstance ? '🔄 ' : '';
-                const categoryIcon = eventCategories[category]?.icon || '📝';
-                eventTitle.textContent = `${repeatIndicator}${categoryIcon} ${event.title}`;
-                
-                // Event details
-                const eventDetails = document.createElement('div');
-                eventDetails.className = 'text-xs opacity-75 mt-1';
-                let detailsText = '';
-                if (event.time) detailsText += `⏰ ${formatTime(event.time)}`;
-                if (event.description) {
-                    if (detailsText) detailsText += ' • ';
-                    detailsText += event.description.length > 30 ? 
-                        event.description.substring(0, 30) + '...' : 
-                        event.description;
-                }
-                if (detailsText) {
-                    eventDetails.textContent = detailsText;
-                    eventContent.appendChild(eventDetails);
-                }
-                
-                eventContent.appendChild(eventTitle);
-                
-                // Event actions
-                const eventActions = document.createElement('div');
-                eventActions.className = 'flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity';
-                
-                // Edit button
-                const editBtn = document.createElement('button');
-                editBtn.innerHTML = '✏️';
-                editBtn.className = 'p-1 hover:bg-white hover:bg-opacity-50 rounded text-xs';
-                editBtn.onclick = (e) => {
-                    e.stopPropagation();
-                    closeDayView();
-                    setTimeout(() => editEvent(dateKey, eventIndex), 100);
-                };
-                
-                // Delete button
-                const deleteBtn = document.createElement('button');
-                deleteBtn.innerHTML = '🗑️';
-                deleteBtn.className = 'p-1 hover:bg-white hover:bg-opacity-50 rounded text-xs';
-                deleteBtn.onclick = (e) => {
-                    e.stopPropagation();
-                    deleteEvent(dateKey, eventIndex);
-                    // Refresh the day view
-                    setTimeout(() => {
-                        if (selectedDayForView) {
-                            const updatedEvents = getAllDayEvents(selectedDayForView);
-                            populateDayEventsList(updatedEvents, dateKey);
-                        }
-                    }, 100);
-                };
-                
-                eventActions.appendChild(editBtn);
-                eventActions.appendChild(deleteBtn);
-                
-                eventDiv.appendChild(eventContent);
-                eventDiv.appendChild(eventActions);
-                
-                // Click to edit
-                eventDiv.onclick = () => {
-                    closeDayView();
-                    setTimeout(() => editEvent(dateKey, eventIndex), 100);
-                };
-                
-                eventsList.appendChild(eventDiv);
-            });
-        }
-
-        function formatTime(timeString) {
-            if (!timeString) return '';
-            const [hours, minutes] = timeString.split(':');
-            const hour = parseInt(hours);
-            const ampm = hour >= 12 ? 'PM' : 'AM';
-            const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-            return `${displayHour}:${minutes} ${ampm}`;
-        }
-
-        function openEventModalFromDay() {
-            if (!selectedDayForView) return;
-            // selectedDate should already be set from openDayView
-            closeDayView();
-            setTimeout(() => {
-                document.getElementById('eventTitle').value = '';
-                document.getElementById('eventCategory').value = 'work';
-                document.getElementById('eventTime').value = '';
-                document.getElementById('eventDescription').value = '';
-                document.getElementById('eventRepeat').value = 'none';
-                document.getElementById('repeatUntil').value = '';
-                document.getElementById('repeatOptions').style.display = 'none';
-                document.getElementById('deleteSeriesSection').style.display = 'none';
-                document.getElementById('modalTitle').textContent = 'Add New Event';
-                document.getElementById('saveEventBtn').textContent = 'Save Event';
-                editingEvent = null;
-                seriesDeleteTarget = null;
-                document.getElementById('eventModal').style.display = 'flex';
-            }, 100);
-        }
-
-        function closeDayView() {
-            document.getElementById('dayViewModal').style.display = 'none';
-            selectedDayForView = null;
-        }
-
         function createRepeatingEventsLocal(originalDateKey, eventData) {
             if (!eventData.repeat || eventData.repeat === 'none') return;
             
             const endDate = eventData.repeatUntil ? new Date(eventData.repeatUntil + 'T23:59:59') : null;
-            const maxInstances = 365; // Prevent infinite loops
+            const maxInstances = 365;
             let currentDate = originalDateKey;
             let instanceCount = 0;
             
@@ -1094,18 +708,15 @@
                 currentDate = getNextDate(currentDate, eventData.repeat);
                 const nextDate = new Date(currentDate + 'T00:00:00');
                 
-                // Stop if we've reached the end date
                 if (endDate && nextDate > endDate) break;
                 
-                // Stop if we're more than 2 years in the future
                 const twoYearsFromNow = new Date();
                 twoYearsFromNow.setFullYear(twoYearsFromNow.getFullYear() + 2);
                 if (nextDate > twoYearsFromNow) break;
                 
-                // Create the repeating instance
                 const repeatingEventData = {
                     ...eventData,
-                    repeat: null, // Don't repeat the repeated instances
+                    repeat: null,
                     repeatUntil: null,
                     isRepeatingInstance: true
                 };
@@ -1118,25 +729,34 @@
             }
         }
 
-        async function deleteEvent(dateKey, eventIndex) {
-            const event = events[dateKey][eventIndex];
-
-            if (isFirebaseConfigured && event.id) {
-                await deleteEventFromFirebase(event.id);
-            } else {
-                events[dateKey].splice(eventIndex, 1);
-                if (events[dateKey].length === 0) {
-                    delete events[dateKey];
-                }
-                saveEventsToLocalStorage();
-                renderCalendar();
-            }
+        // Category filtering
+        function applyCategoryFilter(category) {
+            currentCategoryFilter = category;
+            document.getElementById('categoryFilter').value = category;
+            renderCalendar();
+            updateFilterStatus();
         }
 
-        function closeModal() {
-            document.getElementById('eventModal').style.display = 'none';
-            document.getElementById('deleteSeriesSection').style.display = 'none';
-            seriesDeleteTarget = null;
+        function clearCategoryFilter() {
+            currentCategoryFilter = 'all';
+            document.getElementById('categoryFilter').value = 'all';
+            renderCalendar();
+            updateFilterStatus();
+        }
+
+        function updateFilterStatus() {
+            const filterSelect = document.getElementById('categoryFilter');
+            const clearBtn = document.getElementById('clearFilter');
+            
+            if (currentCategoryFilter !== 'all') {
+                filterSelect.style.backgroundColor = '#dbeafe';
+                filterSelect.style.borderColor = '#2563eb';
+                clearBtn.style.display = 'inline-block';
+            } else {
+                filterSelect.style.backgroundColor = 'white';
+                filterSelect.style.borderColor = '#d1d5db';
+                clearBtn.style.display = 'none';
+            }
         }
 
         // Calendar rendering
@@ -1144,10 +764,7 @@
             const calendar = document.getElementById('calendar');
             const monthYear = document.getElementById('monthYear');
             
-            // Update header
             monthYear.textContent = `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
-            
-            // Clear calendar
             calendar.innerHTML = '';
 
             // Add week day headers
@@ -1172,15 +789,11 @@
             // Add days of the month
             for (let day = 1; day <= daysInMonth; day++) {
                 const dayCell = document.createElement('div');
-                const dateKey = formatDateKey(currentDate.getFullYear(), currentDate.getMonth(), day);
-                const dayEvents = events[dateKey] || [];
+                const dayEvents = getDayEvents(day);
                 const todayClass = isToday(day) ? ' today' : '';
                 
                 dayCell.className = `min-h-24 border border-gray-200 p-2 calendar-day cursor-pointer${todayClass}`;
-                dayCell.onclick = () => {
-                    console.log('Day clicked:', day); // Debug log
-                    openDayView(day);
-                };
+                dayCell.onclick = () => openDayView(day);
 
                 // Day number
                 const dayNumber = document.createElement('div');
@@ -1202,7 +815,6 @@
                     const eventTitle = document.createElement('span');
                     eventTitle.className = 'truncate';
                     
-                    // Add repeat indicator and category icon for events
                     const repeatIndicator = event.repeat || event.isRepeatingInstance ? '🔄 ' : '';
                     const categoryIcon = eventCategories[category]?.icon || '📝';
                     eventTitle.textContent = repeatIndicator + categoryIcon + ' ' + event.title;
@@ -1216,6 +828,7 @@
                     editBtn.className = 'p-1 hover:bg-blue-200 rounded';
                     editBtn.onclick = (e) => {
                         e.stopPropagation();
+                        const dateKey = formatDateKey(currentDate.getFullYear(), currentDate.getMonth(), day);
                         editEvent(dateKey, eventIndex);
                     };
 
@@ -1225,6 +838,7 @@
                     deleteBtn.className = 'p-1 hover:bg-red-200 rounded text-red-600';
                     deleteBtn.onclick = (e) => {
                         e.stopPropagation();
+                        const dateKey = formatDateKey(currentDate.getFullYear(), currentDate.getMonth(), day);
                         deleteEvent(dateKey, eventIndex);
                     };
 
@@ -1248,38 +862,45 @@
             }
         }
 
-        // Enable/disable save button based on title input
+        // Firebase setup check
+        function checkFirebaseConfig() {
+            try {
+                if (window.db && window.firestore) {
+                    isFirebaseConfigured = true;
+                    updateStatus('online', '☁️ Connected');
+                    document.getElementById('setupInstructions').style.display = 'none';
+                } else {
+                    throw new Error('Firebase not configured');
+                }
+            } catch (error) {
+                isFirebaseConfigured = false;
+                updateStatus('offline', '💾 Local Only');
+                loadEventsFromLocalStorage();
+            }
+        }
+
+        // Event listeners
         document.getElementById('eventTitle').addEventListener('input', function() {
             const saveBtn = document.getElementById('saveEventBtn');
             saveBtn.disabled = !this.value.trim();
         });
 
-        // Show/hide repeat options based on repeat selection
         document.getElementById('eventRepeat').addEventListener('change', function() {
             const repeatOptions = document.getElementById('repeatOptions');
             repeatOptions.style.display = this.value !== 'none' ? 'block' : 'none';
         });
 
-        // Handle category filter changes
         document.getElementById('categoryFilter').addEventListener('change', function() {
             applyCategoryFilter(this.value);
         });
 
-        // Close modal when clicking outside
+        // Close modals when clicking outside
         document.getElementById('eventModal').addEventListener('click', function(e) {
             if (e.target === this) {
                 closeModal();
             }
         });
 
-        // Close delete series modal when clicking outside
-        document.getElementById('deleteSeriesModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeDeleteSeriesModal();
-            }
-        });
-
-        // Close day view modal when clicking outside
         document.getElementById('dayViewModal').addEventListener('click', function(e) {
             if (e.target === this) {
                 closeDayView();
@@ -1290,15 +911,8 @@
         setTimeout(() => {
             checkFirebaseConfig();
             renderCalendar();
-            updateFilterStatus(); // Initialize filter UI
+            updateFilterStatus();
         }, 1000);
-
-        // Cleanup listener when page unloads
-        window.addEventListener('beforeunload', () => {
-            if (eventsListener) {
-                eventsListener();
-            }
-        });
     </script>
 </body>
 </html>
