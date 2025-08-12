@@ -94,6 +94,21 @@
             color: #475569;
             border-left-color: #64748b;
         }
+        .event-guitar {
+            background-color: #fef7cd;
+            color: #a16207;
+            border-left-color: #eab308;
+        }
+        .event-kj {
+            background-color: #e0e7ff;
+            color: #3730a3;
+            border-left-color: #6366f1;
+        }
+        .event-daniel {
+            background-color: #ecfccb;
+            color: #365314;
+            border-left-color: #65a30d;
+        }
         .event-actions {
             display: none;
             gap: 0.25rem;
@@ -210,10 +225,30 @@
             <p class="text-yellow-700 text-sm mt-3"><strong>Until then, your calendar will work with local storage only.</strong></p>
         </div>
 
-        <!-- Category Legend -->
+        <!-- Category Legend and Filter -->
         <div class="bg-gray-50 rounded-lg p-4 mb-6">
-            <h3 class="text-sm font-semibold text-gray-700 mb-3">Event Categories</h3>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-sm font-semibold text-gray-700">Event Categories</h3>
+                <div class="flex items-center gap-2">
+                    <label class="text-xs text-gray-600">Filter:</label>
+                    <select id="categoryFilter" class="text-xs border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                        <option value="all">All Categories</option>
+                        <option value="work">💼 Work</option>
+                        <option value="personal">🏠 Personal</option>
+                        <option value="health">⚕️ Health</option>
+                        <option value="social">👥 Social</option>
+                        <option value="finance">💰 Finance</option>
+                        <option value="travel">✈️ Travel</option>
+                        <option value="education">📚 Education</option>
+                        <option value="guitar">🎸 Guitar</option>
+                        <option value="kj">👤 KJ</option>
+                        <option value="daniel">👨 Daniel</option>
+                        <option value="other">📝 Other</option>
+                    </select>
+                    <button id="clearFilter" onclick="clearCategoryFilter()" class="text-xs bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded transition-colors">Clear</button>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-6 gap-2 text-xs">
                 <div class="flex items-center gap-2">
                     <div class="w-3 h-3 bg-blue-500 rounded"></div>
                     <span>Work</span>
@@ -241,6 +276,18 @@
                 <div class="flex items-center gap-2">
                     <div class="w-3 h-3 bg-red-500 rounded"></div>
                     <span>Education</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-3 h-3 bg-yellow-500 rounded"></div>
+                    <span>Guitar</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-3 h-3 bg-indigo-500 rounded"></div>
+                    <span>KJ</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-3 h-3 bg-lime-500 rounded"></div>
+                    <span>Daniel</span>
                 </div>
                 <div class="flex items-center gap-2">
                     <div class="w-3 h-3 bg-gray-500 rounded"></div>
@@ -276,6 +323,9 @@
                         <option value="finance">💰 Finance</option>
                         <option value="travel">✈️ Travel</option>
                         <option value="education">📚 Education</option>
+                        <option value="guitar">🎸 Guitar</option>
+                        <option value="kj">👤 KJ</option>
+                        <option value="daniel">👨 Daniel</option>
                         <option value="other">📝 Other</option>
                     </select>
                 </div>
@@ -323,6 +373,7 @@
         let editingEvent = null;
         let isFirebaseConfigured = false;
         let eventsListener = null;
+        let currentCategoryFilter = 'all';
 
         // Event categories with their properties
         const eventCategories = {
@@ -333,6 +384,9 @@
             finance: { name: 'Finance', icon: '💰', color: 'purple' },
             travel: { name: 'Travel', icon: '✈️', color: 'emerald' },
             education: { name: 'Education', icon: '📚', color: 'red' },
+            guitar: { name: 'Guitar', icon: '🎸', color: 'yellow' },
+            kj: { name: 'KJ', icon: '👤', color: 'indigo' },
+            daniel: { name: 'Daniel', icon: '👨', color: 'lime' },
             other: { name: 'Other', icon: '📝', color: 'gray' }
         };
 
@@ -361,6 +415,38 @@
                 isFirebaseConfigured = false;
                 updateStatus('offline', '💾 Local Only');
                 loadEventsFromLocalStorage();
+            }
+        }
+
+        // Category filtering functions
+        function applyCategoryFilter(category) {
+            currentCategoryFilter = category;
+            document.getElementById('categoryFilter').value = category;
+            renderCalendar();
+            
+            // Update visual feedback
+            updateFilterStatus();
+        }
+
+        function clearCategoryFilter() {
+            currentCategoryFilter = 'all';
+            document.getElementById('categoryFilter').value = 'all';
+            renderCalendar();
+            updateFilterStatus();
+        }
+
+        function updateFilterStatus() {
+            const filterSelect = document.getElementById('categoryFilter');
+            const clearBtn = document.getElementById('clearFilter');
+            
+            if (currentCategoryFilter !== 'all') {
+                filterSelect.style.backgroundColor = '#dbeafe';
+                filterSelect.style.borderColor = '#2563eb';
+                clearBtn.style.display = 'inline-block';
+            } else {
+                filterSelect.style.backgroundColor = 'white';
+                filterSelect.style.borderColor = '#d1d5db';
+                clearBtn.style.display = 'none';
             }
         }
 
@@ -826,6 +912,11 @@
             repeatOptions.style.display = this.value !== 'none' ? 'block' : 'none';
         });
 
+        // Handle category filter changes
+        document.getElementById('categoryFilter').addEventListener('change', function() {
+            applyCategoryFilter(this.value);
+        });
+
         // Close modal when clicking outside
         document.getElementById('eventModal').addEventListener('click', function(e) {
             if (e.target === this) {
@@ -837,6 +928,7 @@
         setTimeout(() => {
             checkFirebaseConfig();
             renderCalendar();
+            updateFilterStatus(); // Initialize filter UI
         }, 1000);
 
         // Cleanup listener when page unloads
