@@ -407,6 +407,46 @@
         </div>
     </div>
 
+    <!-- Day View Modal -->
+    <div id="dayViewModal" class="modal-overlay" style="display: none;">
+        <div class="modal" style="width: 32rem; max-width: 95vw;">
+            <div class="flex items-center justify-between mb-4">
+                <h3 id="dayViewTitle" class="text-lg font-semibold text-gray-800"></h3>
+                <button onclick="closeDayView()" class="text-gray-500 hover:text-gray-700 text-xl">×</button>
+            </div>
+            
+            <div class="space-y-4">
+                <!-- Quick Add Event Section -->
+                <div class="bg-blue-50 p-3 rounded-lg border">
+                    <button id="quickAddBtn" onclick="openEventModalFromDay()" class="w-full flex items-center justify-center gap-2 text-blue-700 hover:text-blue-800 font-medium">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        Add Event for This Day
+                    </button>
+                </div>
+
+                <!-- Events List -->
+                <div id="dayEventsList" class="space-y-2">
+                    <!-- Events will be populated by JavaScript -->
+                </div>
+
+                <!-- Empty State -->
+                <div id="dayEventsEmpty" class="text-center py-8 text-gray-500" style="display: none;">
+                    <svg class="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 002 2z"></path>
+                    </svg>
+                    <p class="text-sm">No events scheduled</p>
+                    <p class="text-xs text-gray-400 mt-1">Click "Add Event" to create your first event for this day</p>
+                </div>
+            </div>
+
+            <div class="mt-6 pt-4 border-t border-gray-200">
+                <button onclick="closeDayView()" class="w-full btn btn-secondary">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Global variables
         let currentDate = new Date();
@@ -417,6 +457,7 @@
         let eventsListener = null;
         let currentCategoryFilter = 'all';
         let seriesDeleteTarget = null; // For tracking which series to delete
+        let selectedDayForView = null; // For day view modal
 
         // Event categories with their properties
         const eventCategories = {
@@ -875,6 +916,150 @@
             saveEventsToLocalStorage();
         }
 
+        // Day view functions
+        function openDayView(day) {
+            selectedDayForView = day;
+            const dateKey = formatDateKey(currentDate.getFullYear(), currentDate.getMonth(), day);
+            const dayEvents = getAllDayEvents(day);
+            
+            // Set title with date formatting
+            const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const formattedDate = date.toLocaleDateString('en-US', options);
+            
+            document.getElementById('dayViewTitle').textContent = formattedDate;
+            
+            // Populate events list
+            populateDayEventsList(dayEvents, dateKey);
+            
+            // Show modal
+            document.getElementById('dayViewModal').style.display = 'flex';
+        }
+
+        function populateDayEventsList(dayEvents, dateKey) {
+            const eventsList = document.getElementById('dayEventsList');
+            const emptyState = document.getElementById('dayEventsEmpty');
+            
+            // Clear existing events
+            eventsList.innerHTML = '';
+            
+            if (dayEvents.length === 0) {
+                eventsList.style.display = 'none';
+                emptyState.style.display = 'block';
+                return;
+            }
+            
+            eventsList.style.display = 'block';
+            emptyState.style.display = 'none';
+            
+            // Sort events by time (events with time first, then no-time events)
+            const sortedEvents = [...dayEvents].sort((a, b) => {
+                if (a.time && !b.time) return -1;
+                if (!a.time && b.time) return 1;
+                if (a.time && b.time) return a.time.localeCompare(b.time);
+                return 0;
+            });
+            
+            sortedEvents.forEach((event, eventIndex) => {
+                const eventDiv = document.createElement('div');
+                const category = event.category || 'work';
+                eventDiv.className = `event-item event-${category} hover:shadow-sm transition-shadow cursor-pointer`;
+                
+                // Event content container
+                const eventContent = document.createElement('div');
+                eventContent.className = 'flex-1 min-w-0';
+                
+                // Event title with icons
+                const eventTitle = document.createElement('div');
+                eventTitle.className = 'font-medium truncate';
+                const repeatIndicator = event.repeat || event.isRepeatingInstance ? '🔄 ' : '';
+                const categoryIcon = eventCategories[category]?.icon || '📝';
+                eventTitle.textContent = `${repeatIndicator}${categoryIcon} ${event.title}`;
+                
+                // Event details
+                const eventDetails = document.createElement('div');
+                eventDetails.className = 'text-xs opacity-75 mt-1';
+                let detailsText = '';
+                if (event.time) detailsText += `⏰ ${formatTime(event.time)}`;
+                if (event.description) {
+                    if (detailsText) detailsText += ' • ';
+                    detailsText += event.description.length > 30 ? 
+                        event.description.substring(0, 30) + '...' : 
+                        event.description;
+                }
+                eventDetails.textContent = detailsText;
+                
+                eventContent.appendChild(eventTitle);
+                if (detailsText) eventContent.appendChild(eventDetails);
+                
+                // Event actions
+                const eventActions = document.createElement('div');
+                eventActions.className = 'flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity';
+                
+                // Edit button
+                const editBtn = document.createElement('button');
+                editBtn.innerHTML = '✏️';
+                editBtn.className = 'p-1 hover:bg-white hover:bg-opacity-50 rounded text-xs';
+                editBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    closeDayView();
+                    setTimeout(() => editEvent(dateKey, eventIndex), 100);
+                };
+                
+                // Delete button
+                const deleteBtn = document.createElement('button');
+                deleteBtn.innerHTML = '🗑️';
+                deleteBtn.className = 'p-1 hover:bg-white hover:bg-opacity-50 rounded text-xs';
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    deleteEvent(dateKey, eventIndex);
+                    // Refresh the day view
+                    setTimeout(() => {
+                        if (selectedDayForView) {
+                            const updatedEvents = getAllDayEvents(selectedDayForView);
+                            populateDayEventsList(updatedEvents, dateKey);
+                        }
+                    }, 100);
+                };
+                
+                eventActions.appendChild(editBtn);
+                eventActions.appendChild(deleteBtn);
+                
+                // Add hover group class to parent for actions visibility
+                eventDiv.className += ' group';
+                eventDiv.appendChild(eventContent);
+                eventDiv.appendChild(eventActions);
+                
+                // Click to edit
+                eventDiv.onclick = () => {
+                    closeDayView();
+                    setTimeout(() => editEvent(dateKey, eventIndex), 100);
+                };
+                
+                eventsList.appendChild(eventDiv);
+            });
+        }
+
+        function formatTime(timeString) {
+            if (!timeString) return '';
+            const [hours, minutes] = timeString.split(':');
+            const hour = parseInt(hours);
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+            return `${displayHour}:${minutes} ${ampm}`;
+        }
+
+        function openEventModalFromDay() {
+            if (!selectedDayForView) return;
+            closeDayView();
+            setTimeout(() => openEventModal(selectedDayForView), 100);
+        }
+
+        function closeDayView() {
+            document.getElementById('dayViewModal').style.display = 'none';
+            selectedDayForView = null;
+        }
+
         function createRepeatingEventsLocal(originalDateKey, eventData) {
             if (!eventData.repeat || eventData.repeat === 'none') return;
             
@@ -970,7 +1155,7 @@
                 const todayClass = isToday(day) ? ' today' : '';
                 
                 dayCell.className = `min-h-24 border border-gray-200 p-2 calendar-day cursor-pointer${todayClass}`;
-                dayCell.onclick = () => openEventModal(day);
+                dayCell.onclick = () => openDayView(day);
 
                 // Day number
                 const dayNumber = document.createElement('div');
@@ -1066,6 +1251,13 @@
         document.getElementById('deleteSeriesModal').addEventListener('click', function(e) {
             if (e.target === this) {
                 closeDeleteSeriesModal();
+            }
+        });
+
+        // Close day view modal when clicking outside
+        document.getElementById('dayViewModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeDayView();
             }
         });
 
