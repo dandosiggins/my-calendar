@@ -11,7 +11,6 @@
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, getDocs, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
         
-        // TODO: Replace with your Firebase config
         const firebaseConfig = {
           apiKey: "AIzaSyAKnXHWejoL5QYwg09boKMRLvlobQGKr7o",
           authDomain: "my-calendar-app-e4c69.firebaseapp.com",
@@ -929,6 +928,9 @@
             
             document.getElementById('dayViewTitle').textContent = formattedDate;
             
+            // Store the selected date for creating new events
+            selectedDate = dateKey;
+            
             // Populate events list
             populateDayEventsList(dayEvents, dateKey);
             
@@ -939,6 +941,11 @@
         function populateDayEventsList(dayEvents, dateKey) {
             const eventsList = document.getElementById('dayEventsList');
             const emptyState = document.getElementById('dayEventsEmpty');
+            
+            if (!eventsList || !emptyState) {
+                console.error('Day view elements not found');
+                return;
+            }
             
             // Clear existing events
             eventsList.innerHTML = '';
@@ -963,7 +970,7 @@
             sortedEvents.forEach((event, eventIndex) => {
                 const eventDiv = document.createElement('div');
                 const category = event.category || 'work';
-                eventDiv.className = `event-item event-${category} hover:shadow-sm transition-shadow cursor-pointer`;
+                eventDiv.className = `event-item event-${category} hover:shadow-sm transition-shadow cursor-pointer group`;
                 
                 // Event content container
                 const eventContent = document.createElement('div');
@@ -987,10 +994,12 @@
                         event.description.substring(0, 30) + '...' : 
                         event.description;
                 }
-                eventDetails.textContent = detailsText;
+                if (detailsText) {
+                    eventDetails.textContent = detailsText;
+                    eventContent.appendChild(eventDetails);
+                }
                 
                 eventContent.appendChild(eventTitle);
-                if (detailsText) eventContent.appendChild(eventDetails);
                 
                 // Event actions
                 const eventActions = document.createElement('div');
@@ -1025,8 +1034,6 @@
                 eventActions.appendChild(editBtn);
                 eventActions.appendChild(deleteBtn);
                 
-                // Add hover group class to parent for actions visibility
-                eventDiv.className += ' group';
                 eventDiv.appendChild(eventContent);
                 eventDiv.appendChild(eventActions);
                 
@@ -1051,8 +1058,23 @@
 
         function openEventModalFromDay() {
             if (!selectedDayForView) return;
+            // selectedDate should already be set from openDayView
             closeDayView();
-            setTimeout(() => openEventModal(selectedDayForView), 100);
+            setTimeout(() => {
+                document.getElementById('eventTitle').value = '';
+                document.getElementById('eventCategory').value = 'work';
+                document.getElementById('eventTime').value = '';
+                document.getElementById('eventDescription').value = '';
+                document.getElementById('eventRepeat').value = 'none';
+                document.getElementById('repeatUntil').value = '';
+                document.getElementById('repeatOptions').style.display = 'none';
+                document.getElementById('deleteSeriesSection').style.display = 'none';
+                document.getElementById('modalTitle').textContent = 'Add New Event';
+                document.getElementById('saveEventBtn').textContent = 'Save Event';
+                editingEvent = null;
+                seriesDeleteTarget = null;
+                document.getElementById('eventModal').style.display = 'flex';
+            }, 100);
         }
 
         function closeDayView() {
@@ -1155,7 +1177,10 @@
                 const todayClass = isToday(day) ? ' today' : '';
                 
                 dayCell.className = `min-h-24 border border-gray-200 p-2 calendar-day cursor-pointer${todayClass}`;
-                dayCell.onclick = () => openDayView(day);
+                dayCell.onclick = () => {
+                    console.log('Day clicked:', day); // Debug log
+                    openDayView(day);
+                };
 
                 // Day number
                 const dayNumber = document.createElement('div');
