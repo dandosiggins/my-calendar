@@ -502,8 +502,6 @@
             if (!isFirebaseEnabled) return null;
             
             try {
-                updateSyncStatus('syncing', '⏳ Saving to cloud...');
-                
                 const eventsCollection = window.firestore.collection(window.db, 'events');
                 const docRef = await window.firestore.addDoc(eventsCollection, {
                     date: dateKey,
@@ -512,14 +510,12 @@
                     updatedAt: new Date()
                 });
                 
-                updateSyncStatus('online', '☁️ Saved to cloud');
                 console.log('Saved event to Firebase with ID:', docRef.id);
                 return docRef.id;
                 
             } catch (error) {
                 console.error('Error saving to Firebase:', error);
-                updateSyncStatus('offline', '❌ Save failed');
-                return null;
+                throw error; // Re-throw to be caught by Promise.all
             }
         }
 
@@ -801,7 +797,7 @@
         }
 
         // Save event
-        function saveEvent() {
+        async function saveEvent() {
             const title = document.getElementById('eventTitle').value.trim();
             const category = document.getElementById('eventCategory').value;
             const time = document.getElementById('eventTime').value;
@@ -845,12 +841,21 @@
                 
                 // Save to Firebase
                 if (isFirebaseEnabled) {
-                    saveEventToFirebase(selectedDate, eventData);
+                    try {
+                        updateSyncStatus('syncing', '⏳ Saving to cloud...');
+                        await saveEventToFirebase(selectedDate, eventData);
+                        updateSyncStatus('online', '✅ Saved to cloud');
+                        setTimeout(() => {
+                            updateSyncStatus('online', '☁️ Synced');
+                        }, 2000);
+                    } catch (error) {
+                        updateSyncStatus('offline', '❌ Save failed');
+                    }
                 }
                 
                 // Create repeating instances if needed
                 if (repeat !== 'none') {
-                    createRepeatingEvents(selectedDate, eventData);
+                    await createRepeatingEvents(selectedDate, eventData);
                 }
             }
             
